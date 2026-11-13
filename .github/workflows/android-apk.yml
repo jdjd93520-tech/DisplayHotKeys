@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  push:
+    paths:
+      - '.github/workflows/android-apk.yml'
+      - 'android-src.zip.b64'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Restore Android project
+        run: |
+          base64 --decode android-src.zip.b64 > /tmp/android-project.zip
+          unzip -q /tmp/android-project.zip -d .
+          test -f DisplayHotKeysAndroid/app/build.gradle
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build debug APK
+        run: gradle --no-daemon -p DisplayHotKeysAndroid assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DisplayHotKeys-Android-debug
+          path: DisplayHotKeysAndroid/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
